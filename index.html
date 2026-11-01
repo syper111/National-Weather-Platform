@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>وطني (Watani) - مشروع تخرج نظم الطقس والتوقيت للأردن</title>
+
+    <!-- Tailwind CSS & Lucide Icons & Chart.js -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap');
+        * {
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        
+        .glass-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+        
+        .glass-input:focus {
+            border-color: #38bdf8;
+            outline: none;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+        }
+        /* Analog Clock Styling */
+        
+        .clock-face {
+            position: relative;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            border: 3px solid rgba(56, 189, 248, 0.4);
+            background: rgba(15, 23, 42, 0.5);
+        }
+        
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            border-radius: 4px;
+            transition: transform 0.5s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+        }
+        
+        .hour-hand {
+            width: 4px;
+            height: 32px;
+            background: #38bdf8;
+        }
+        
+        .minute-hand {
+            width: 3px;
+            height: 46px;
+            background: #818cf8;
+        }
+        
+        .second-hand {
+            width: 2px;
+            height: 50px;
+            background: #f43f5e;
+        }
+        
+        .center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: #f43f5e;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        /* Custom Scrollbars */
+        
+         ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+         ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        
+         ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body class="p-3 md:p-6 min-h-screen flex flex-col justify-between">
+
+    <div class="max-w-7xl mx-auto space-y-6 w-full">
+
+        <!-- Header & Navigation -->
+        <header class="glass-card rounded-2xl p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                <div class="flex items-center gap-3">
+                    <div class="p-3 bg-gradient-to-tr from-emerald-500/30 to-sky-500/30 text-emerald-400 rounded-xl border border-emerald-500/30">
+                        <i data-lucide="flag" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-2xl font-black tracking-wide bg-gradient-to-r from-emerald-400 via-sky-400 to-indigo-400 bg-clip-text text-transparent">
+                                وطنــي (Watani)
+                            </h1>
+                            <span class="px-2.5 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full font-bold">
+                مشروع تخرج جامعي
+              </span>
+                        </div>
+                        <p class="text-xs text-slate-400">منصة الطقس والتوقيت المخصصة للمملكة الأردنية الهاشمية</p>
+                    </div>
+                </div>
+
+                <button onclick="openModal('about-modal')" class="md:hidden p-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-xl border border-indigo-500/30 text-xs font-bold flex items-center gap-1">
+          <i data-lucide="info" class="w-4 h-4"></i> حول
+        </button>
+            </div>
+
+            <!-- Navigation Tabs & About Button -->
+            <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                <nav class="flex items-center gap-2 bg-slate-900/60 p-1.5 rounded-xl border border-white/5 w-full md:w-auto overflow-x-auto">
+                    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-sky-500 text-white shadow-lg shadow-sky-500/20 whitespace-nowrap">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i> الرئيسية
+          </button>
+                    <button onclick="switchTab('jordan-map')" id="tab-jordan-map" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition-all whitespace-nowrap">
+            <i data-lucide="map-pin" class="w-4 h-4"></i> ألوية الأردن
+          </button>
+                    <button onclick="switchTab('world-clock')" id="tab-world-clock" class="tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition-all whitespace-nowrap">
+            <i data-lucide="clock" class="w-4 h-4"></i> الساعة العالمية
+          </button>
+                </nav>
+
+                <button onclick="openModal('about-modal')" class="hidden md:flex items-center gap-1.5 px-3 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 rounded-xl border border-indigo-500/30 text-xs font-bold transition-all shrink-0">
+          <i data-lucide="graduation-cap" class="w-4 h-4"></i> عن المشروع
+        </button>
+            </div>
+        </header>
+
+        <!-- Jordan Governorate / District Selector -->
+        <section class="glass-card rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-l-4 border-l-emerald-500">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="p-2.5 bg-emerald-500/20 text-emerald-400 rounded-lg shrink-0">
+                    <i data-lucide="map" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-bold text-slate-200">محدد محافظات وألوية المملكة الأردنية الهاشمية</h2>
+                    <p class="text-xs text-slate-400">اختر المحافظة واللواء للحصول على التنبؤات المحلية والدقيقة</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+                <select id="governorate-select" onchange="onGovernorateChange()" class="glass-input w-full sm:w-48 px-3 py-2 rounded-xl text-sm cursor-pointer">
+          <!-- Filled via JS -->
+        </select>
+
+                <select id="district-select" onchange="onDistrictChange()" class="glass-input w-full sm:w-56 px-3 py-2 rounded-xl text-sm cursor-pointer disabled:opacity-50" disabled>
+          <option value="" class="bg-slate-900">اختر اللواء / المنطقة...</option>
+        </select>
+
+                <button onclick="useCurrentLocation()" class="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm font-medium border border-white/10 transition-all shrink-0">
+          <i data-lucide="navigation" class="w-4 h-4 text-emerald-400"></i> موقعي الحالي
+        </button>
+            </div>
+        </section>
+
+        <!-- TAB 1: MAIN DASHBOARD -->
+        <main id="view-dashboard" class="space-y-6">
+
+            <!-- Top Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                <!-- Weather Card -->
+                <div class="glass-card rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between">
+                    <div class="flex items-start justify-between">
+                        <div class="max-w-[70%]">
+                            <span id="region-badge" class="px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs rounded-full font-semibold">
+                المملكة الأردنية الهاشمية
+              </span>
+                            <h2 id="current-city-name" class="text-2xl font-extrabold text-white mt-2 truncate">الكرك</h2>
+                            <p id="current-district-name" class="text-xs font-medium text-slate-400 truncate">قصبة الكرك</p>
+                        </div>
+                        <div id="weather-icon-container" class="text-amber-400 p-2.5 bg-slate-800/60 rounded-xl border border-white/10 shrink-0">
+                            <i data-lucide="sun" class="w-8 h-8"></i>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex items-baseline justify-between">
+                        <div class="flex items-baseline">
+                            <span id="current-temp" class="text-5xl font-black text-white tracking-tight">--</span>
+                            <span class="text-2xl font-semibold text-sky-400 mr-1">°C</span>
+                        </div>
+                        <div class="text-right">
+                            <p id="weather-condition-text" class="text-sm font-bold text-slate-200">جاري الربط مع النموذج الأوروبي...</p>
+                            <p class="text-xs text-slate-400">المحسوسة <span id="feels-like-temp">--</span>°C</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-white/10 flex justify-between text-[11px] text-slate-400">
+                        <span>إحداثيات: <span id="current-coords" class="text-slate-300">--</span></span>
+                        <span id="update-timestamp" class="text-emerald-400 font-medium">ECMWF / ICON-EU</span>
+                    </div>
+                </div>
+
+                <!-- Clock Card (12-Hour System) -->
+                <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+                    <div class="flex flex-col justify-between h-full">
+                        <div>
+                            <div class="flex items-center gap-1.5 text-indigo-400 text-xs font-bold uppercase mb-1">
+                                <i data-lucide="clock" class="w-3.5 h-3.5"></i> التوقيت المحلي
+                            </div>
+                            <div id="digital-clock" class="text-2xl font-black tracking-wider text-white font-mono">
+                                12:00:00 ص
+                            </div>
+                            <p id="clock-date" class="text-[11px] text-slate-400 mt-1">--</p>
+                        </div>
+
+                        <div class="mt-3 text-[11px] text-slate-300 space-y-1">
+                            <div class="flex items-center gap-1.5">
+                                <i data-lucide="sunrise" class="w-3.5 h-3.5 text-amber-400"></i>
+                                <span>الشروق: <strong id="sunrise-time" class="text-white">--:--</strong></span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <i data-lucide="sunset" class="w-3.5 h-3.5 text-orange-400"></i>
+                                <span>الغروب: <strong id="sunset-time" class="text-white">--:--</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analog Clock -->
+                    <div class="clock-face shrink-0">
+                        <div class="center-dot"></div>
+                        <div id="hour-hand" class="hand hour-hand"></div>
+                        <div id="minute-hand" class="hand minute-hand"></div>
+                        <div id="second-hand" class="hand second-hand"></div>
+                    </div>
+                </div>
+
+                <!-- Environment Metrics -->
+                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <i data-lucide="activity" class="w-4 h-4 text-sky-400"></i> مؤشرات البيئة
+                    </h3>
+
+                    <div class="grid grid-cols-2 gap-2.5 my-auto">
+                        <div class="p-2.5 bg-slate-900/50 rounded-xl border border-white/5">
+                            <div class="flex items-center gap-1 text-slate-400 text-[11px] mb-0.5">
+                                <i data-lucide="wind" class="w-3 h-3 text-sky-400"></i> الرياح
+                            </div>
+                            <span id="wind-speed" class="text-base font-bold text-white">--</span> <span class="text-[10px] text-slate-400">كم/س</span>
+                        </div>
+
+                        <div class="p-2.5 bg-slate-900/50 rounded-xl border border-white/5">
+                            <div class="flex items-center gap-1 text-slate-400 text-[11px] mb-0.5">
+                                <i data-lucide="droplets" class="w-3 h-3 text-blue-400"></i> الرطوبة
+                            </div>
+                            <span id="humidity" class="text-base font-bold text-white">--</span> <span class="text-[10px] text-slate-400">%</span>
+                        </div>
+
+                        <div class="p-2.5 bg-slate-900/50 rounded-xl border border-white/5">
+                            <div class="flex items-center gap-1 text-slate-400 text-[11px] mb-0.5">
+                                <i data-lucide="sun" class="w-3 h-3 text-amber-400"></i> UV
+                            </div>
+                            <span id="uv-index" class="text-base font-bold text-white">--</span> <span id="uv-level" class="text-[10px] text-amber-400 font-semibold">--</span>
+                        </div>
+
+                        <div class="p-2.5 bg-slate-900/50 rounded-xl border border-white/5">
+                            <div class="flex items-center gap-1 text-slate-400 text-[11px] mb-0.5">
+                                <i data-lucide="gauge" class="w-3 h-3 text-emerald-400"></i> الضغط
+                            </div>
+                            <span id="pressure" class="text-base font-bold text-white">--</span> <span class="text-[10px] text-slate-400">hPa</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary & Guidance Card -->
+                <div class="glass-card rounded-2xl p-5 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 via-slate-900/40 to-slate-900/80 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                                    <i data-lucide="compass" class="w-4 h-4"></i>
+                                </div>
+                                <h3 class="text-sm font-bold text-emerald-300">ملخص وطنـي اليومي</h3>
+                            </div>
+                            <button onclick="fetchDailySummary()" title="تحديث" class="text-xs text-slate-400 hover:text-white transition-colors">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              </button>
+                        </div>
+
+                        <p id="daily-summary-text" class="text-xs text-slate-300 leading-relaxed min-h-[70px]">
+                            جاري تحليل وحساب مؤشرات الطقس للمنطقة...
+                        </p>
+                    </div>
+
+                    <div class="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
+                        <span class="text-[10px] text-emerald-400/80 font-medium">مخصص للمنطقة المختارة</span>
+                        <span class="text-[10px] text-slate-400">قراءات محلية مباشرة</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 24 Hours Hourly Forecast Chart -->
+            <div class="glass-card rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="line-chart" class="w-5 h-5 text-sky-400"></i>
+                        <h3 class="text-base font-bold text-white">توقعات الـ 24 ساعة القادمة (النموذج الأوروبي)</h3>
+                    </div>
+                    <span class="text-xs text-slate-400">درجات الحرارة وفرص الأمطار</span>
+                </div>
+
+                <div class="h-56 w-full">
+                    <canvas id="hourlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 7 Days Forecast -->
+            <div class="glass-card rounded-2xl p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="calendar" class="w-5 h-5 text-indigo-400"></i>
+                        <h3 class="text-base font-bold text-white">توقعات الـ 7 أيام القادمة</h3>
+                    </div>
+                </div>
+
+                <div id="weekly-forecast-container" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                    <!-- Filled via JS -->
+                </div>
+            </div>
+
+        </main>
+
+        <!-- TAB 2: JORDAN DISTRICTS EXPLORER -->
+        <section id="view-jordan-map" class="hidden space-y-6">
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">مستكشف ألوية ومحافظات الأردن</h2>
+                        <p class="text-xs text-slate-400">تصفح كافة الألوية والمناطق الأردنية بنقرة واحدة</p>
+                    </div>
+                    <div class="relative w-full sm:w-72">
+                        <input type="text" id="jordan-search-input" onkeyup="filterJordanDistricts()" placeholder="ابحث عن لواء أو منطقة..." class="glass-input w-full px-4 py-2 pr-10 rounded-xl text-sm">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                    </div>
+                </div>
+
+                <div id="jordan-districts-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <!-- Filled via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: WORLD CLOCK -->
+        <section id="view-world-clock" class="hidden space-y-6">
+            <div class="glass-card rounded-2xl p-6">
+                <div class="mb-6">
+                    <h2 class="text-xl font-bold text-white">الساعة العالمية وتواقيت المدن</h2>
+                    <p class="text-xs text-slate-400">تابع التوقيت المحلي لأهم مدن العالم مقارنة بتوقيت الأردن المحلي</p>
+                </div>
+
+                <div id="world-cities-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Filled via JS -->
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Footer with Legal & Ref Links -->
+    <footer class="mt-8 pt-6 border-t border-white/10 text-slate-400 text-xs text-center space-y-3 max-w-7xl mx-auto w-full">
+        <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-slate-300">
+            <button onclick="openModal('about-modal')" class="hover:text-emerald-400 transition-colors flex items-center gap-1">
+        <i data-lucide="graduation-cap" class="w-3.5 h-3.5"></i> عن مشروع وطني
+      </button>
+            <span class="text-slate-600">•</span>
+            <button onclick="openModal('privacy-modal')" class="hover:text-emerald-400 transition-colors flex items-center gap-1">
+        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> سياسة الخصوصية
+      </button>
+            <span class="text-slate-600">•</span>
+            <button onclick="openModal('terms-modal')" class="hover:text-emerald-400 transition-colors flex items-center gap-1">
+        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> شروط الاستخدام
+      </button>
+            <span class="text-slate-600">•</span>
+            <button onclick="openModal('ref-modal')" class="hover:text-emerald-400 transition-colors flex items-center gap-1">
+        <i data-lucide="book-open" class="w-3.5 h-3.5"></i> المراجع ومصادر البيانات
+      </button>
+        </div>
+
+        <p class="text-[11px] text-slate-500">
+            مشروع تخرج: <strong class="text-emerald-400">وطنـي (Watani)</strong> &copy; 2026 - تم التطوير والبرمجة بمجهود شخصي بواسطة <strong class="text-slate-300">المهندس: إبراهيم</strong> | جميع الحقوق محفوظة.
+        </p>
+    </footer>
+
+    <!-- MODALS SYSTEM -->
+
+    <!-- About Modal -->
+    <div id="about-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card max-w-lg w-full rounded-2xl p-6 border border-emerald-500/30 relative">
+            <button onclick="closeModal('about-modal')" class="absolute top-4 left-4 text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+            <div class="flex items-center gap-3 mb-4">
+                <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl">
+                    <i data-lucide="flag" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">مشروع تخرج: تطبيق وطني (Watani)</h3>
+                    <span class="px-2 py-0.5 text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full font-bold">إصدار بيتا قيد التطوير (Beta)</span>
+                </div>
+            </div>
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <p><strong>"وطني"</strong> هو مشروع تخرج تطبيقي ومجهود برمجي شخصي يهدف لتقديم منصة متكاملة لمعالجة وعرض بيانات الطقس والساعة لكافة ألوية ومحافظات المملكة الأردنية الهاشمية الـ 12.</p>
+
+                <div class="p-3 bg-slate-900/60 rounded-xl border border-white/5 space-y-1">
+                    <p class="font-bold text-emerald-400">إعداد وتطوير البرمجية:</p>
+                    <p class="text-sm font-extrabold text-white">المهندس: إبراهيم</p>
+                </div>
+
+                <p>يعتمد المشروع على الربط المباشر مع واجهات البرمجة المفتوحة وتحديث التنبؤات العدودية الأوروبية عالية الدقة للمناخ الأردني بشكل لحظي وتفاعلي.</p>
+            </div>
+            <div class="mt-6 text-left">
+                <button onclick="closeModal('about-modal')" class="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-xl">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Modal -->
+    <div id="privacy-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card max-w-lg w-full rounded-2xl p-6 border border-white/10 relative">
+            <button onclick="closeModal('privacy-modal')" class="absolute top-4 left-4 text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-5 h-5 text-sky-400"></i> سياسة الخصوصية
+            </h3>
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed max-h-80 overflow-y-auto pl-2">
+                <p>1. <strong>الموقع الجغرافي:</strong> يتم استخدام تحديد الموقع الجغرافي (GPS) فقط عند ضغطك على زر "موقعي الحالي" وذلك لجلب الطقس لمنطقتك مباشرة دون حفظ أي بيانات موقع على خوادمنا.</p>
+                <p>2. <strong>بيانات المستخدم:</strong> لا يقوم تطبيق وطني بتخزين أو جمع أي بيانات شخصية أو معلومات تعريفية خاصة بالمستخدمين.</p>
+                <p>3. <strong>الاستعلامات:</strong> يتم إرسال إحداثيات الموقع الجغرافي مباشرة للنماذج المفتوحة لمعالجة البيانات بشكل آني ومباشر.</p>
+            </div>
+            <div class="mt-6 text-left">
+                <button onclick="closeModal('privacy-modal')" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl">موافق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terms Modal -->
+    <div id="terms-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card max-w-lg w-full rounded-2xl p-6 border border-white/10 relative">
+            <button onclick="closeModal('terms-modal')" class="absolute top-4 left-4 text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="file-text" class="w-5 h-5 text-indigo-400"></i> شروط الاستخدام
+            </h3>
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed max-h-80 overflow-y-auto pl-2">
+                <p>1. <strong>الاستخدام الاسترشادي:</strong> التنبؤات الجوية والمؤشرات المعروضة هي لأغراض الاسترشاد والتخطيط اليومي.</p>
+                <p>2. <strong>الظروف الجوية الطارئة:</strong> في حالات العواصف والانجماد الشديد، يُنصح دائماً بمتابعة البيانات الصادرة عن الجهات الرسمية وإدارة الأرصاد الجوية الأردنية.</p>
+                <p>3. <strong>إصدار البيتا:</strong> التطبيق في مرحلة التطوير والتحديث المستمر كنموذج مشروع تخرج متكامل لخدمة الوطن.</p>
+            </div>
+            <div class="mt-6 text-left">
+                <button onclick="closeModal('terms-modal')" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl">موافق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- References Modal -->
+    <div id="ref-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card max-w-lg w-full rounded-2xl p-6 border border-white/10 relative">
+            <button onclick="closeModal('ref-modal')" class="absolute top-4 left-4 text-slate-400 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="book-open" class="w-5 h-5 text-amber-400"></i> المراجع ومصادر البيانات
+            </h3>
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed max-h-80 overflow-y-auto pl-2">
+                <div class="p-2.5 bg-slate-900/60 rounded-xl border border-white/5">
+                    <p class="font-bold text-emerald-400">نماذج الطقس العالمية (ECMWF & ICON-EU):</p>
+                    <p class="text-[11px] text-slate-400 mt-1">المحرك الرئيسي يعتمد على المركز الأوروبي للتنبؤات الجوية متوسطة المدى (ECMWF) والنموذج الألماني (ICON-EU) وهي المحركات نفسها المعتمدة في تقارير طقس العرب.</p>
+                </div>
+                <div class="p-2.5 bg-slate-900/60 rounded-xl border border-white/5">
+                    <p class="font-bold text-amber-400">بيانات الألوية والجغرافيا الأردنية:</p>
+                    <p class="text-[11px] text-slate-400 mt-1">البيانات الإحداثية والجغرافية معتمدة ومحدثة لمحافظات المملكة الـ 12 وألويتها كافة.</p>
+                </div>
+                <div class="p-2.5 bg-slate-900/60 rounded-xl border border-white/5">
+                    <p class="font-bold text-indigo-400">المكتبات والواجهات البرمجية:</p>
+                    <p class="text-[11px] text-slate-400 mt-1">Open-Meteo Weather API, Tailwind CSS, Chart.js, Lucide Icons.</p>
+                </div>
+            </div>
+            <div class="mt-6 text-left">
+                <button onclick="closeModal('ref-modal')" class="px-4 py-2 bg-slate-800 text-white text-xs font-bold rounded-xl">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const JORDAN_DATA = {
+            "الكرك": [{
+                name: "قصبة الكرك",
+                lat: 31.1833,
+                lon: 35.7000
+            }, {
+                name: "القصر / الربة",
+                lat: 31.3100,
+                lon: 35.7400
+            }, {
+                name: "المزار الجنوبي / مؤتة",
+                lat: 31.0600,
+                lon: 35.6900
+            }, {
+                name: "الأغوار الجنوبية (غور الصافي)",
+                lat: 31.0300,
+                lon: 35.4800
+            }, {
+                name: "عي",
+                lat: 31.1200,
+                lon: 35.6300
+            }, {
+                name: "فقوع",
+                lat: 31.3700,
+                lon: 35.6800
+            }, {
+                name: "قطرانة",
+                lat: 31.2400,
+                lon: 36.0400
+            }],
+            "عمان": [{
+                name: "قصبة عمان",
+                lat: 31.9539,
+                lon: 35.9106
+            }, {
+                name: "جامعة / شفا بدران / الجبيهة",
+                lat: 32.0286,
+                lon: 35.8856
+            }, {
+                name: "ماركا / طبربور",
+                lat: 31.9900,
+                lon: 35.9600
+            }, {
+                name: "القويسمة / سحاب",
+                lat: 31.8700,
+                lon: 36.0000
+            }, {
+                name: "وادي السير / بدر الجديدة",
+                lat: 31.9500,
+                lon: 35.8200
+            }, {
+                name: "ناعور",
+                lat: 31.8667,
+                lon: 35.8167
+            }, {
+                name: "الموقر",
+                lat: 31.8100,
+                lon: 36.1700
+            }, {
+                name: "الجيزة",
+                lat: 31.7000,
+                lon: 35.9500
+            }],
+            "إربد": [{
+                name: "قصبة إربد",
+                lat: 32.5556,
+                lon: 35.8500
+            }, {
+                name: "الرمثا",
+                lat: 32.5592,
+                lon: 36.0069
+            }, {
+                name: "بني كنانة",
+                lat: 32.6500,
+                lon: 35.8500
+            }, {
+                name: "الكورة (دير أبي سعيد)",
+                lat: 32.5000,
+                lon: 35.6800
+            }, {
+                name: "الأغوار الشمالية",
+                lat: 32.6000,
+                lon: 35.6100
+            }, {
+                name: "بني عبيد (الحصن)",
+                lat: 32.4800,
+                lon: 35.8500
+            }],
+            "الزرقاء": [{
+                name: "قصبة الزرقاء",
+                lat: 32.0833,
+                lon: 36.1000
+            }, {
+                name: "الرصيفة",
+                lat: 32.0167,
+                lon: 36.0500
+            }, {
+                name: "الهاشمية",
+                lat: 32.1300,
+                lon: 36.1100
+            }, {
+                name: "الأزرق",
+                lat: 31.8300,
+                lon: 36.8100
+            }],
+            "البلقاء": [{
+                name: "قصبة السلط",
+                lat: 32.0333,
+                lon: 35.7333
+            }, {
+                name: "عين الباشا / صافوط",
+                lat: 32.0600,
+                lon: 35.8300
+            }, {
+                name: "الفحيص / ماحص",
+                lat: 31.9800,
+                lon: 35.7700
+            }, {
+                name: "دير علا / الأغوار الوسطى",
+                lat: 32.2000,
+                lon: 35.6200
+            }, {
+                name: "الشونة الجنوبية",
+                lat: 31.8900,
+                lon: 35.6100
+            }],
+            "عجلون": [{
+                name: "قصبة عجلون",
+                lat: 32.3333,
+                lon: 35.7500
+            }, {
+                name: "كفرنجة",
+                lat: 32.3000,
+                lon: 35.7000
+            }, {
+                name: "صخرة / عنجرة",
+                lat: 32.3800,
+                lon: 35.8100
+            }],
+            "جرش": [{
+                name: "قصبة جرش",
+                lat: 32.2722,
+                lon: 35.8914
+            }, {
+                name: "برما / سوف",
+                lat: 32.2300,
+                lon: 35.8100
+            }],
+            "مأدبا": [{
+                name: "قصبة مأدبا",
+                lat: 31.7167,
+                lon: 35.8000
+            }, {
+                name: "ذيبان",
+                lat: 31.5000,
+                lon: 35.7800
+            }],
+            "المفرق": [{
+                name: "قصبة المفرق",
+                lat: 32.3333,
+                lon: 36.2000
+            }, {
+                name: "الرويشد / الصفاوي",
+                lat: 32.5000,
+                lon: 38.2000
+            }],
+            "معان": [{
+                name: "قصبة معان",
+                lat: 30.1944,
+                lon: 35.7342
+            }, {
+                name: "البتراء (وادي موسى)",
+                lat: 30.3289,
+                lon: 35.4444
+            }, {
+                name: "الشوبك",
+                lat: 30.5200,
+                lon: 35.5600
+            }],
+            "الطفيلة": [{
+                name: "قصبة الطفيلة",
+                lat: 30.8333,
+                lon: 35.6000
+            }, {
+                name: "بصيرا / القادسية",
+                lat: 30.7300,
+                lon: 35.6100
+            }],
+            "العقبة": [{
+                name: "قصبة العقبة",
+                lat: 29.5267,
+                lon: 35.0078
+            }, {
+                name: "وادي رم / القويرة",
+                lat: 29.5700,
+                lon: 35.4200
+            }]
+        };
+
+        const WORLD_CITIES = [{
+            name: "عمان (الأردن)",
+            timezone: "Asia/Amman"
+        }, {
+            name: "الرياض (السعودية)",
+            timezone: "Asia/Riyadh"
+        }, {
+            name: "القاهرة (مصر)",
+            timezone: "Africa/Cairo"
+        }, {
+            name: "دبي (الإمارات)",
+            timezone: "Asia/Dubai"
+        }, {
+            name: "لندن (بريطانيا)",
+            timezone: "Europe/London"
+        }, {
+            name: "نيويورك (أمريكا)",
+            timezone: "America/New_York"
+        }];
+
+        let currentGovernorate = "الكرك";
+        let currentDistrict = JORDAN_DATA["الكرك"][0];
+        let hourlyChartInstance = null;
+
+        function formatTime12h(isoStr) {
+            if (!isoStr) return "--:--";
+            const timePart = isoStr.includes("T") ? isoStr.split("T")[1] : isoStr;
+            const [hStr, mStr] = timePart.split(":");
+            let h = parseInt(hStr, 10);
+            const period = h >= 12 ? "م" : "ص";
+            h = h % 12 || 12;
+            return `${String(h).padStart(2, '0')}:${mStr} ${period}`;
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            populateGovernorates();
+            renderJordanExplorerCards();
+            renderWorldClockCards();
+
+            loadLocationData(currentDistrict.lat, currentDistrict.lon, "الكرك", currentDistrict.name);
+
+            setInterval(updateClocks, 1000);
+            updateClocks();
+
+            setInterval(() => {
+                loadLocationData(currentDistrict.lat, currentDistrict.lon, currentGovernorate, currentDistrict.name);
+            }, 300000);
+        });
+
+        function populateGovernorates() {
+            const govSelect = document.getElementById("governorate-select");
+            govSelect.innerHTML = '<option value="">اختر المحافظة (12 محافظة)...</option>';
+
+            Object.keys(JORDAN_DATA).forEach(gov => {
+                const opt = document.createElement("option");
+                opt.value = gov;
+                opt.textContent = `محافظة ${gov}`;
+                opt.className = "bg-slate-900";
+                if (gov === "الكرك") opt.selected = true;
+                govSelect.appendChild(opt);
+            });
+
+            onGovernorateChange();
+        }
+
+        function onGovernorateChange() {
+            const govSelect = document.getElementById("governorate-select");
+            const selectedGov = govSelect.value || "الكرك";
+            const distSelect = document.getElementById("district-select");
+
+            currentGovernorate = selectedGov;
+            distSelect.disabled = false;
+            distSelect.innerHTML = '';
+
+            JORDAN_DATA[selectedGov].forEach((dist, idx) => {
+                const opt = document.createElement("option");
+                opt.value = idx;
+                opt.textContent = dist.name;
+                opt.className = "bg-slate-900";
+                distSelect.appendChild(opt);
+            });
+
+            distSelect.selectedIndex = 0;
+            onDistrictChange();
+        }
+
+        function onDistrictChange() {
+            const govSelect = document.getElementById("governorate-select");
+            const selectedGov = govSelect.value || "الكرك";
+            const distIdx = document.getElementById("district-select").value || 0;
+
+            if (JORDAN_DATA[selectedGov] && JORDAN_DATA[selectedGov][distIdx]) {
+                currentDistrict = JORDAN_DATA[selectedGov][distIdx];
+                loadLocationData(currentDistrict.lat, currentDistrict.lon, selectedGov, currentDistrict.name);
+            }
+        }
+
+        async function loadLocationData(lat, lon, govName, distName) {
+            document.getElementById("current-city-name").innerText = govName;
+            document.getElementById("current-district-name").innerText = distName;
+            document.getElementById("current-coords").innerText = `${lat.toFixed(2)}°, ${lon.toFixed(2)}°`;
+
+            try {
+                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&models=ecmwf_ifs025,icon_seamless&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,surface_pressure,wind_speed_10m&hourly=temperature_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto`);
+                const data = await response.json();
+
+                const current = data.current;
+                document.getElementById("current-temp").innerText = Math.round(current.temperature_2m);
+                document.getElementById("feels-like-temp").innerText = Math.round(current.apparent_temperature);
+                document.getElementById("humidity").innerText = current.relative_humidity_2m;
+                document.getElementById("wind-speed").innerText = Math.round(current.wind_speed_10m);
+                document.getElementById("pressure").innerText = Math.round(current.surface_pressure);
+
+                const weatherInfo = parseWeatherCode(current.weather_code);
+                document.getElementById("weather-condition-text").innerText = weatherInfo.text;
+                document.getElementById("weather-icon-container").innerHTML = `<i data-lucide="${weatherInfo.icon}" class="w-8 h-8"></i>`;
+
+                if (data.daily) {
+                    document.getElementById("sunrise-time").innerText = formatTime12h(data.daily.sunrise[0]);
+                    document.getElementById("sunset-time").innerText = formatTime12h(data.daily.sunset[0]);
+                    const uv = data.daily.uv_index_max[0];
+                    document.getElementById("uv-index").innerText = uv;
+                    document.getElementById("uv-level").innerText = uv > 7 ? "مرتفع" : (uv > 4 ? "متوسط" : "منخفض");
+
+                    renderWeeklyForecast(data.daily);
+                }
+
+                if (data.hourly) {
+                    renderHourlyChart(data.hourly);
+                }
+
+                lucide.createIcons();
+                fetchDailySummary();
+
+            } catch (err) {
+                console.error("Fetch Error:", err);
+            }
+        }
+
+        function parseWeatherCode(code) {
+            if (code === 0) return {
+                text: "سماء صافية",
+                icon: "sun"
+            };
+            if (code === 1 || code === 2) return {
+                text: "غائم جزئياً",
+                icon: "cloud-sun"
+            };
+            if (code === 3) return {
+                text: "غائم كلياً",
+                icon: "cloud"
+            };
+            if ([45, 48].includes(code)) return {
+                text: "ضباب محلي",
+                icon: "cloud-fog"
+            };
+            if ([51, 53, 55, 61, 63, 65].includes(code)) return {
+                text: "أمطـار خير",
+                icon: "cloud-rain"
+            };
+            if ([71, 73, 75, 77, 85, 86].includes(code)) return {
+                text: "تساقط ثلوج",
+                icon: "snowflake"
+            };
+            if ([95, 96, 99].includes(code)) return {
+                text: "عواصف رعدية",
+                icon: "cloud-lightning"
+            };
+            return {
+                text: "معتدل",
+                icon: "sun"
+            };
+        }
+
+        function renderHourlyChart(hourly) {
+            const ctx = document.getElementById('hourlyChart').getContext('2d');
+            const labels = hourly.time.slice(0, 24).map(t => formatTime12h(t));
+            const temps = hourly.temperature_2m.slice(0, 24);
+
+            if (hourlyChartInstance) hourlyChartInstance.destroy();
+
+            hourlyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'الحرارة (°C)',
+                        data: temps,
+                        borderColor: '#38bdf8',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255,255,255,0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255,255,255,0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderWeeklyForecast(daily) {
+            const container = document.getElementById("weekly-forecast-container");
+            container.innerHTML = "";
+            const days = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+            for (let i = 0; i < 7; i++) {
+                const dateObj = new Date(daily.time[i]);
+                const dayName = days[dateObj.getDay()];
+                const info = parseWeatherCode(daily.weather_code[i]);
+
+                const card = document.createElement("div");
+                card.className = "p-3 bg-slate-900/60 rounded-xl border border-white/5 flex flex-col items-center text-center space-y-1.5";
+                card.innerHTML = `
+          <span class="text-xs font-bold text-slate-300">${i === 0 ? "اليوم" : dayName}</span>
+          <div class="text-amber-400 my-1"><i data-lucide="${info.icon}" class="w-5 h-5"></i></div>
+          <span class="text-[10px] text-slate-400 h-5 flex items-center">${info.text}</span>
+          <div class="text-xs font-bold text-white">
+            <span>${Math.round(daily.temperature_2m_max[i])}°</span>
+            <span class="text-slate-500 font-normal text-[10px] mr-1">${Math.round(daily.temperature_2m_min[i])}°</span>
+          </div>
+        `;
+                container.appendChild(card);
+            }
+        }
+
+        function updateClocks() {
+            const now = new Date();
+
+            let hours = now.getHours();
+            const period = hours >= 12 ? "م" : "ص";
+            hours = hours % 12 || 12;
+            const hoursStr = String(hours).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            document.getElementById("digital-clock").innerText = `${hoursStr}:${minutes}:${seconds} ${period}`;
+
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            document.getElementById("clock-date").innerText = now.toLocaleDateString('ar-JO', options);
+
+            const secDeg = (now.getSeconds() / 60) * 360;
+            const minDeg = ((now.getMinutes() + now.getSeconds() / 60) / 60) * 360;
+            const hourDeg = (((now.getHours() % 12) + now.getMinutes() / 60) / 12) * 360;
+
+            document.getElementById("second-hand").style.transform = `rotate(${secDeg}deg)`;
+            document.getElementById("minute-hand").style.transform = `rotate(${minDeg}deg)`;
+            document.getElementById("hour-hand").style.transform = `rotate(${hourDeg}deg)`;
+
+            renderWorldClockCards();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll("main, section").forEach(el => {
+                if (el.id.startsWith("view-")) el.classList.add("hidden");
+            });
+            document.getElementById(`view-${tabId}`).classList.remove("hidden");
+
+            document.querySelectorAll(".tab-btn").forEach(btn => {
+                btn.className = "tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition-all whitespace-nowrap";
+            });
+
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            activeBtn.className = "tab-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-sky-500 text-white shadow-lg shadow-sky-500/20 whitespace-nowrap";
+        }
+
+        function renderJordanExplorerCards() {
+            const grid = document.getElementById("jordan-districts-grid");
+            grid.innerHTML = "";
+
+            Object.keys(JORDAN_DATA).forEach(gov => {
+                JORDAN_DATA[gov].forEach(dist => {
+                    const card = document.createElement("div");
+                    card.className = "district-card p-3.5 glass-card rounded-xl border border-white/10 hover:border-sky-500/50 transition-all cursor-pointer flex justify-between items-center";
+                    card.onclick = () => {
+                        currentGovernorate = gov;
+                        currentDistrict = dist;
+
+                        // Sync governorate dropdown
+                        const govSelect = document.getElementById("governorate-select");
+                        govSelect.value = gov;
+                        onGovernorateChange();
+
+                        loadLocationData(dist.lat, dist.lon, gov, dist.name);
+                        switchTab('dashboard');
+                    };
+
+                    card.innerHTML = `
+            <div>
+              <span class="text-[10px] text-emerald-400 font-bold uppercase">محافظة ${gov}</span>
+              <h4 class="text-xs font-bold text-white mt-0.5">${dist.name}</h4>
+            </div>
+            <div class="p-1.5 bg-slate-800 rounded-lg text-slate-400 hover:text-emerald-400">
+              <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+            </div>
+          `;
+                    grid.appendChild(card);
+                });
+            });
+        }
+
+        function filterJordanDistricts() {
+            const query = document.getElementById("jordan-search-input").value.toLowerCase();
+            document.querySelectorAll(".district-card").forEach(card => {
+                const text = card.innerText.toLowerCase();
+                card.style.display = text.includes(query) ? "flex" : "none";
+            });
+        }
+
+        function renderWorldClockCards() {
+            const container = document.getElementById("world-cities-grid");
+            if (!container) return;
+            container.innerHTML = "";
+
+            WORLD_CITIES.forEach(city => {
+                const card = document.createElement("div");
+                card.className = "p-4 glass-card rounded-xl border border-white/10 flex items-center justify-between";
+
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('en-US', {
+                    timeZone: city.timezone,
+                    hour12: true,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+
+                card.innerHTML = `
+          <div>
+            <h4 class="text-sm font-bold text-white">${city.name}</h4>
+            <p class="text-xs text-slate-400">${city.timezone}</p>
+          </div>
+          <div class="text-right">
+            <span class="text-lg font-mono font-bold text-sky-400">${timeStr}</span>
+          </div>
+        `;
+                container.appendChild(card);
+            });
+        }
+
+        function fetchDailySummary() {
+            const summaryEl = document.getElementById("daily-summary-text");
+            const temp = parseInt(document.getElementById("current-temp").innerText) || 20;
+
+            let summary = "";
+            if (currentGovernorate === "العقبة" || currentDistrict.name.includes("الأغوار")) {
+                summary = `الأجواء دافئة ولطيفة جداً في ${currentDistrict.name}. المناخ ممتاز للأنشطة الخارجية والرحلات البرية.`;
+            } else if (temp < 13) {
+                summary = `الأجواء باردة في ${currentDistrict.name} (${currentGovernorate}). يُنصح بارتداء ملابس دافئة ومتابعة تغيرات الرياح ليلاً.`;
+            } else if (temp >= 13 && temp <= 23) {
+                summary = `أجواء معتدلة وممتعة في ${currentDistrict.name}. مناخ مناسب تماماً للأعمال والأنشطة اليومية.`;
+            } else {
+                summary = `درجات الحرارة مرتفعة نسبياً في ${currentDistrict.name}. يُفضل تجنب التعرض المباشر لأشعة الشمس لفترات طويلة.`;
+            }
+
+            summaryEl.innerText = summary;
+        }
+
+        function useCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    loadLocationData(position.coords.latitude, position.coords.longitude, "موقعي الحالي", "GPS");
+                }, () => {
+                    alert("تعذر تحديد الموقع تلقائياً، جاري استمرار عرض الكرك.");
+                });
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove("hidden");
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add("hidden");
+        }
+    </script>
+</body>
+
+</html>
